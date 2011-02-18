@@ -14,83 +14,28 @@ using RAD.Windows;
 namespace RAD.ClipMon
 {
 	/// <summary>
-	/// Clipboard Monitor Example 
+    /// Code Page 1252 Fixer
+    /// Copyright (c) Sam Pospischil 2011
+    /// <br/>
+    /// Based on Clipboard Monitor Example 
 	/// Copyright (c) Ross Donald 2003
 	/// ross@radsoftware.com.au
 	/// http://www.radsoftware.com.au
 	/// <br/>
-	/// Demonstrates how to create a clipboard monitor in C#. Whenever an item is copied
-	/// to the clipboard by any application this form will be notified by a call to 
-	/// the WindowProc method with the WM_DRAWCLIPBOARD message allowing this form to
-	/// read the contents of the clipboard and perform some processing.
+	/// Monitors the clipboard for changes, and replaces characters from Windows CP 1252
+    /// with those from the low ASCII range. Configurable via tray menu as follows:
+    /// (also a :TODO: list)
+    /// - Toggle replace 'smart quotes' (accented single and double quotes, long dashes and ellipsis)
+    /// - Toggle replace smart quotes as HTML entites, preserving them rather than converting down
+    /// - Toggle replace any characters which have named HTML entities
+    /// - Toggle replace all high-ASCII characters with entity numbers
+    /// - Toggle automatic conversion of RTF text to plaintext
 	/// </summary>
 	/// <remarks>
-	/// This application has some functionality beyond a simple example. When an item is copied
-	/// to the clipboard this application looks for hyperlinks, unc paths or email addresses 
-	/// then displays a balloon dialog (Windows XP only) showing the link that was found.
-	/// The icon in the system tray area can be clicked to display a menu of the found links.
-	/// <br/>
-	/// This source code is a work in progress and comes without warranty expressed or implied.
-	/// It is an attempt to demonstrate a concept, not to be a finished application.
 	/// </remarks>
 	public class frmMain : System.Windows.Forms.Form
 	{
-		#region Clipboard Formats
-
-		string[] formatsAll = new string[] 
-		{
-			DataFormats.Bitmap,
-			DataFormats.CommaSeparatedValue,
-			DataFormats.Dib,
-			DataFormats.Dif,
-			DataFormats.EnhancedMetafile,
-			DataFormats.FileDrop,
-			DataFormats.Html,
-			DataFormats.Locale,
-			DataFormats.MetafilePict,
-			DataFormats.OemText,
-			DataFormats.Palette,
-			DataFormats.PenData,
-			DataFormats.Riff,
-			DataFormats.Rtf,
-			DataFormats.Serializable,
-			DataFormats.StringFormat,
-			DataFormats.SymbolicLink,
-			DataFormats.Text,
-			DataFormats.Tiff,
-			DataFormats.UnicodeText,
-			DataFormats.WaveAudio
-		};
-
-		string[] formatsAllDesc = new String[] 
-		{
-			"Bitmap",
-			"CommaSeparatedValue",
-			"Dib",
-			"Dif",
-			"EnhancedMetafile",
-			"FileDrop",
-			"Html",
-			"Locale",
-			"MetafilePict",
-			"OemText",
-			"Palette",
-			"PenData",
-			"Riff",
-			"Rtf",
-			"Serializable",
-			"StringFormat",
-			"SymbolicLink",
-			"Text",
-			"Tiff",
-			"UnicodeText",
-			"WaveAudio"
-		};
-
-		#endregion
-
-
-		#region Constants
+        #region Constants
 
 
 
@@ -101,21 +46,14 @@ namespace RAD.ClipMon
 
 		private System.ComponentModel.IContainer components;
 
-		private System.Windows.Forms.MainMenu menuMain;
-		private System.Windows.Forms.MenuItem mnuFormats;
-		private System.Windows.Forms.RichTextBox ctlClipboardText;
-		private System.Windows.Forms.MenuItem mnuSupported;
+        private System.Windows.Forms.MainMenu menuMain;
+        private System.Windows.Forms.RichTextBox ctlClipboardText;
 		protected System.Windows.Forms.ContextMenu cmnuTray;
 		private System.Windows.Forms.MenuItem itmExit;
 		private System.Windows.Forms.MenuItem itmHide;
 		private System.Windows.Forms.MenuItem itmSep2;
-		private System.Windows.Forms.MenuItem itmSep1;
-		private System.Windows.Forms.MenuItem itmHyperlink;
-		private System.Windows.Forms.MenuItem itmSystray;
+        private System.Windows.Forms.MenuItem itmSep1;
 		private RAD.Windows.NotificationAreaIcon notAreaIcon;
-
-		IntPtr _ClipboardViewerNext;
-		Queue _hyperlink = new Queue(); 		
 
 		#endregion
 
@@ -137,10 +75,21 @@ namespace RAD.ClipMon
 
 		#endregion
 
+        #region Properties - Private
 
-		#region Methods - Private
+        private String _rawClip;
+        private String _currentClip;
+        private String _modifiedClip;
 
-		/// <summary>
+        private Queue _history = new Queue();
+        private IntPtr _ClipboardViewerNext;
+
+        #endregion
+
+
+        #region Methods - Private
+
+        /// <summary>
 		/// Register this form as a Clipboard Viewer application
 		/// </summary>
 		private void RegisterClipboardViewer()
@@ -157,163 +106,52 @@ namespace RAD.ClipMon
 		}
 
 		/// <summary>
-		/// Build a menu listing the formats supported by the contents of the clipboard
-		/// </summary>
-		/// <param name="iData">The current clipboard data object</param>
-		private void FormatMenuBuild(IDataObject iData)
-		{
-			string[] astrFormatsNative = iData.GetFormats(false);
-			string[] astrFormatsAll = iData.GetFormats(true);
-
-			Hashtable formatList = new Hashtable(10);
-
-			mnuFormats.MenuItems.Clear();
-
-			for (int i = 0; i <= astrFormatsAll.GetUpperBound(0); i++)
-			{
-				formatList.Add(astrFormatsAll[i], "Converted");
-			}
-
-			for (int i = 0; i <= astrFormatsNative.GetUpperBound(0); i++)
-			{
-				if (formatList.Contains(astrFormatsNative[i]))
-				{
-					formatList[astrFormatsNative[i]] = "Native/Converted";
-				}
-				else
-				{
-					formatList.Add(astrFormatsNative[i], "Native");
-				}
-			}
-
-			foreach (DictionaryEntry item in formatList) 
-			{
-				MenuItem itmNew = new MenuItem(item.Key.ToString() + "\t" + item.Value.ToString());
-				mnuFormats.MenuItems.Add(itmNew);
-			}
-		}
-
-		/// <summary>
-		/// list the formats that are supported from the default clipboard formats.
+		/// Search the clipboard contents for configured characters and translate them
 		/// </summary>
 		/// <param name="iData">The current clipboard contents</param>
-		private void SupportedMenuBuild(IDataObject iData)
-		{
-			mnuSupported.MenuItems.Clear();
-		
-			for (int i = 0; i <= formatsAll.GetUpperBound(0); i++)
-			{
-				MenuItem itmFormat = new MenuItem(formatsAllDesc[i]);
-				//
-				// Get supported formats
-				//
-				if (iData.GetDataPresent(formatsAll[i]))
-				{
-					itmFormat.Checked = true;
-				}
-				mnuSupported.MenuItems.Add(itmFormat);
-		
-			}
-		}
+		/// <returns>true if characters were replaced, false otherwise</returns>
+        private bool replaceQuotes(String clipContents)
+        {
+            bool found = false;
 
-		/// <summary>
-		/// Search the clipboard contents for hyperlinks and unc paths, etc
-		/// </summary>
-		/// <param name="iData">The current clipboard contents</param>
-		/// <returns>true if new links were found, false otherwise</returns>
-		private bool ClipboardSearch(IDataObject iData)
+            // :TODO: pretty much everything
+            _modifiedClip = _currentClip;
+
+            return found;
+        }
+
+        private String getClipAsString(IDataObject iData)
 		{
-			bool FoundNewLinks = false;
+            String contents = "";
 			//
 			// If it is not text then quit
 			// cannot search bitmap etc
 			//
-			if (!iData.GetDataPresent(DataFormats.Text))
+            try 
 			{
-				return false; 
-			}
+			    if (iData.GetDataPresent(DataFormats.Rtf))
+			    {
+                    _rawClip = (string)iData.GetData(DataFormats.Rtf);
 
-			string strClipboardText;
+                    // convert RTF data to plainText using a RichTextBox
+                    System.Windows.Forms.RichTextBox rtBox = new System.Windows.Forms.RichTextBox();
+                    rtBox.Rtf = (string)_rawClip;
+                    contents = rtBox.Text;
 
-			try 
-			{
-				 strClipboardText = (string)iData.GetData(DataFormats.Text);
-			}
+				    setNotificationTooltip("RTF copied");
+			    }
+                else if (iData.GetDataPresent(DataFormats.Text))
+                {
+                    _rawClip = (string)iData.GetData(DataFormats.Text);
+                    contents = _rawClip;
+                    setNotificationTooltip("Text copied");
+                }
+            }
 			catch (Exception ex)
 			{
 				MessageBox.Show(ex.ToString());
-				return false;
 			}
-			
-			// Hyperlinks e.g. http://www.server.com/folder/file.aspx
-			Regex rxURL = new Regex(@"(\b(?:http|https|ftp|file)://[^\s]+)", RegexOptions.IgnoreCase);
-			rxURL.Match(strClipboardText);
-
-			foreach (Match rm in rxURL.Matches(strClipboardText))
-			{
-				if(!_hyperlink.Contains(rm.ToString()))
-				{
-					_hyperlink.Enqueue(rm.ToString());
-					FoundNewLinks = true;
-				}
-			}
-
-			// Files and folders - \\servername\foldername\
-			// TODO needs work
-			Regex rxFile = new Regex(@"(\b\w:\\[^ ]*)", RegexOptions.IgnoreCase);
-			rxFile.Match(strClipboardText);
-
-			foreach (Match rm in rxFile.Matches(strClipboardText))
-			{
-				if(!_hyperlink.Contains(rm.ToString()))
-				{
-					_hyperlink.Enqueue(rm.ToString());
-					FoundNewLinks = true;
-				}
-			}
-
-			// UNC Files 
-			// TODO needs work
-			Regex rxUNC = new Regex(@"(\\\\[^\s/:\*\?\" + "\"" + @"\<\>\|]+)", RegexOptions.IgnoreCase);
-			rxUNC.Match(strClipboardText);
-
-			foreach (Match rm in rxUNC.Matches(strClipboardText))
-			{
-				if(!_hyperlink.Contains(rm.ToString()))
-				{
-					_hyperlink.Enqueue(rm.ToString());
-					FoundNewLinks = true;
-				}
-			}
-
-			// UNC folders
-			// TODO needs work
-			Regex rxUNCFolder = new Regex(@"(\\\\[^\s/:\*\?\" + "\"" + @"\<\>\|]+\\)", RegexOptions.IgnoreCase);
-			rxUNCFolder.Match(strClipboardText);
-
-			foreach (Match rm in rxUNCFolder.Matches(strClipboardText))
-			{
-				if(!_hyperlink.Contains(rm.ToString()))
-				{
-					_hyperlink.Enqueue(rm.ToString());
-					FoundNewLinks = true;
-				}
-			}
-
-			// Email Addresses
-			Regex rxEmailAddress = new Regex(@"([a-zA-Z0-9_\-\.]+)@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.)|(([a-zA-Z0-9\-]+\.)+))([a-zA-Z]{2,4}|[0-9]{1,3})(\]?)", RegexOptions.IgnoreCase);
-			rxEmailAddress.Match(strClipboardText);
-
-			foreach (Match rm in rxEmailAddress.Matches(strClipboardText))
-			{
-				if(!_hyperlink.Contains(rm.ToString()))
-				{
-					_hyperlink.Enqueue("mailto:" + rm.ToString());
-					FoundNewLinks = true;
-				}
-			}
-
-			return FoundNewLinks;
+            return contents;
 		}
 
 		/// <summary>
@@ -321,20 +159,10 @@ namespace RAD.ClipMon
 		/// </summary>
 		private void ContextMenuBuild()
 		{
-			//
-			// Only show the last 10 items
-			//
-			while (_hyperlink.Count > 10)
-			{
-				_hyperlink.Dequeue();
-			}
-
 			cmnuTray.MenuItems.Clear();
 
-			foreach (string objLink in _hyperlink)
-			{
-				cmnuTray.MenuItems.Add(objLink.ToString(), new EventHandler(itmHyperlink_Click));
-			}
+			// :TODO: add mode options
+
 			cmnuTray.MenuItems.Add("-");
 			cmnuTray.MenuItems.Add("Cancel Menu", new EventHandler(itmCancelMenu_Click));
 			cmnuTray.MenuItems.Add("-");
@@ -343,43 +171,22 @@ namespace RAD.ClipMon
 			cmnuTray.MenuItems.Add("E&xit", new EventHandler(itmExit_Click));
 		}
 
-
-		/// <summary>
-		/// Called when an item is chosen from the menu
-		/// </summary>
-		/// <param name="pstrLink">The link that was clicked</param>
-		private void OpenLink(string pstrLink)
-		{
-			try
-			{
-				//
-				// Run the link
-				//
-
-				// TODO needs more work to check for missing files etc
-				System.Diagnostics.Process.Start(pstrLink);
-			}
-			catch (Exception ex)
-			{
-				MessageBox.Show(this, ex.ToString(), Application.ProductName, MessageBoxButtons.OK, MessageBoxIcon.Exclamation);
-			}
-
-		}
-
-
+        private void setNotificationTooltip(String tt)
+        {
+            notAreaIcon.Tooltip = tt;
+        }
 
 		/// <summary>
 		/// Show the clipboard contents in the window 
 		/// and show the notification balloon if a link is found
 		/// </summary>
-		private void GetClipboardData()
+		private void ProcessClipboard()
 		{
 			//
 			// Data on the clipboard uses the 
 			// IDataObject interface
 			//
-			IDataObject iData = new DataObject();  
-			string strText = "clipmon";
+			IDataObject iData = new DataObject();
 
 			try
 			{
@@ -396,63 +203,28 @@ namespace RAD.ClipMon
 				MessageBox.Show(ex.ToString());
 				return;
 			}
-					
-			// 
-			// Get RTF if it is present
-			//
-			if (iData.GetDataPresent(DataFormats.Rtf))
+
+            _currentClip = getClipAsString(iData);
+            
+            // show current clipboard text even if there was no match
+            if (_currentClip != "")
+            {
+                if (iData.GetDataPresent(DataFormats.Rtf))
+                {
+                    ctlClipboardText.Rtf = _rawClip;   // but show the original RTF formatted string where appropriate
+                }
+                else
+                {
+                    ctlClipboardText.Text = _rawClip;
+                }
+            }
+
+            if (replaceQuotes(_currentClip))
 			{
-				ctlClipboardText.Rtf = (string)iData.GetData(DataFormats.Rtf);
-						
-				if(iData.GetDataPresent(DataFormats.Text))
-				{
-					strText = "RTF";
-				}
-			}
-			else
-			{
-				// 
-				// Get Text if it is present
-				//
-				if(iData.GetDataPresent(DataFormats.Text))
-				{
-					ctlClipboardText.Text = (string)iData.GetData(DataFormats.Text);
-							
-					strText = "Text"; 
+				// bad quotes were found and have be purged, so update the text with the fixed one
+                ctlClipboardText.Text = _modifiedClip;
 
-					Debug.WriteLine((string)iData.GetData(DataFormats.Text));
-				}
-				else
-				{
-					//
-					// Only show RTF or TEXT
-					//
-					ctlClipboardText.Text = "(cannot display this format)";
-				}
-			}
-
-			notAreaIcon.Tooltip = strText;
-
-			if( ClipboardSearch(iData) )
-			{
-				//
-				// Found some new links
-				//
-				System.Text.StringBuilder strBalloon = new System.Text.StringBuilder(100);
-
-				foreach (string objLink in _hyperlink)
-				{
-					strBalloon.Append(objLink.ToString()  + "\n");
-				}
-
-				FormatMenuBuild(iData);
-				SupportedMenuBuild(iData);					
-				ContextMenuBuild();
-
-				if (_hyperlink.Count > 0)
-				{
-					notAreaIcon.BalloonDisplay(NotificationAreaIcon.NOTIFYICONdwInfoFlags.NIIF_INFO, "Links", strBalloon.ToString());
-				}
+				notAreaIcon.BalloonDisplay(NotificationAreaIcon.NOTIFYICONdwInfoFlags.NIIF_INFO, "Characters fixed", "Click to view or modify the clipboard contents");
 			}
 		}
 
@@ -485,7 +257,7 @@ namespace RAD.ClipMon
 					
 					Debug.WriteLine("WindowProc DRAWCLIPBOARD: " + m.Msg, "WndProc");
 
-					GetClipboardData();
+                    ProcessClipboard();
 
 					//
 					// Each window that receives the WM_DRAWCLIPBOARD message 
@@ -566,13 +338,6 @@ namespace RAD.ClipMon
 			}
 		}
 
-		private void itmHyperlink_Click(object sender, System.EventArgs e)
-		{
-			MenuItem itmHL = (MenuItem)sender;
-
-			OpenLink(itmHL.Text);
-		}
-
 		private void itmCancelMenu_Click(object sender, System.EventArgs e)
 		{
 			// Do nothing - Cancel the menu
@@ -605,17 +370,7 @@ namespace RAD.ClipMon
 
 		private void notAreaIcon_BalloonClick(object sender, System.EventArgs e)
 		{
-			if(_hyperlink.Count == 1)
-			{
-				string strItem = (string)_hyperlink.ToArray()[0];
-
-				// Only one link so open it
-				OpenLink(strItem);
-			}
-			else
-			{
-				notAreaIcon.ContextMenuDisplay();
-			}
+			notAreaIcon.ContextMenuDisplay();
 		}
 
 		#endregion
@@ -648,120 +403,85 @@ namespace RAD.ClipMon
 		/// </summary>
 		private void InitializeComponent()
 		{
-			this.components = new System.ComponentModel.Container();
-			System.Resources.ResourceManager resources = new System.Resources.ResourceManager(typeof(frmMain));
-			this.menuMain = new System.Windows.Forms.MainMenu();
-			this.mnuFormats = new System.Windows.Forms.MenuItem();
-			this.mnuSupported = new System.Windows.Forms.MenuItem();
-			this.notAreaIcon = new RAD.Windows.NotificationAreaIcon(this.components);
-			this.cmnuTray = new System.Windows.Forms.ContextMenu();
-			this.itmSystray = new System.Windows.Forms.MenuItem();
-			this.itmHyperlink = new System.Windows.Forms.MenuItem();
-			this.itmSep1 = new System.Windows.Forms.MenuItem();
-			this.itmHide = new System.Windows.Forms.MenuItem();
-			this.itmSep2 = new System.Windows.Forms.MenuItem();
-			this.itmExit = new System.Windows.Forms.MenuItem();
-			this.ctlClipboardText = new System.Windows.Forms.RichTextBox();
-			this.SuspendLayout();
-			// 
-			// menuMain
-			// 
-			this.menuMain.MenuItems.AddRange(new System.Windows.Forms.MenuItem[] {
-																					 this.mnuFormats,
-																					 this.mnuSupported});
-			// 
-			// mnuFormats
-			// 
-			this.mnuFormats.Index = 0;
-			this.mnuFormats.Text = "Formats";
-			// 
-			// mnuSupported
-			// 
-			this.mnuSupported.Index = 1;
-			this.mnuSupported.Text = "Supported";
-			// 
-			// notAreaIcon
-			// 
-			this.notAreaIcon.ContextMenu = this.cmnuTray;
-			this.notAreaIcon.DisplayMenuOnLeftClick = true;
-			this.notAreaIcon.Icon = ((System.Drawing.Icon)(resources.GetObject("notAreaIcon.Icon")));
-			this.notAreaIcon.Tooltip = "Clip Monitor";
-			this.notAreaIcon.Visible = false;
-			this.notAreaIcon.BalloonClick += new System.EventHandler(this.notAreaIcon_BalloonClick);
-			// 
-			// cmnuTray
-			// 
-			this.cmnuTray.MenuItems.AddRange(new System.Windows.Forms.MenuItem[] {
-																					 this.itmSystray,
-																					 this.itmHyperlink,
-																					 this.itmSep1,
-																					 this.itmHide,
-																					 this.itmSep2,
-																					 this.itmExit});
-			// 
-			// itmSystray
-			// 
-			this.itmSystray.Index = 0;
-			this.itmSystray.Text = "C:\\Temp\\SysTray";
-			this.itmSystray.Click += new System.EventHandler(this.itmHyperlink_Click);
-			// 
-			// itmHyperlink
-			// 
-			this.itmHyperlink.DefaultItem = true;
-			this.itmHyperlink.Index = 1;
-			this.itmHyperlink.Text = "http://localhost/footprint/";
-			this.itmHyperlink.Click += new System.EventHandler(this.itmHyperlink_Click);
-			// 
-			// itmSep1
-			// 
-			this.itmSep1.Index = 2;
-			this.itmSep1.Text = "-";
-			// 
-			// itmHide
-			// 
-			this.itmHide.Index = 3;
-			this.itmHide.Text = "Hide";
-			this.itmHide.Click += new System.EventHandler(this.itmHide_Click);
-			// 
-			// itmSep2
-			// 
-			this.itmSep2.Index = 4;
-			this.itmSep2.Text = "-";
-			// 
-			// itmExit
-			// 
-			this.itmExit.Index = 5;
-			this.itmExit.MergeOrder = 1000;
-			this.itmExit.Text = "E&xit";
-			// 
-			// ctlClipboardText
-			// 
-			this.ctlClipboardText.DetectUrls = false;
-			this.ctlClipboardText.Dock = System.Windows.Forms.DockStyle.Fill;
-			this.ctlClipboardText.Name = "ctlClipboardText";
-			this.ctlClipboardText.ReadOnly = true;
-			this.ctlClipboardText.Size = new System.Drawing.Size(348, 273);
-			this.ctlClipboardText.TabIndex = 0;
-			this.ctlClipboardText.Text = "";
-			this.ctlClipboardText.WordWrap = false;
-			// 
-			// frmMain
-			// 
-			this.AutoScaleBaseSize = new System.Drawing.Size(6, 15);
-			this.ClientSize = new System.Drawing.Size(348, 273);
-			this.Controls.AddRange(new System.Windows.Forms.Control[] {
-																		  this.ctlClipboardText});
-			this.Font = new System.Drawing.Font("Tahoma", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((System.Byte)(0)));
-			this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
-			this.Location = new System.Drawing.Point(100, 100);
-			this.Menu = this.menuMain;
-			this.Name = "frmMain";
-			this.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
-			this.Text = "Clipboard Monitor Sample from www.radsoftware.com.au";
-			this.Resize += new System.EventHandler(this.frmMain_Resize);
-			this.Closing += new System.ComponentModel.CancelEventHandler(this.frmMain_Closing);
-			this.Load += new System.EventHandler(this.frmMain_Load);
-			this.ResumeLayout(false);
+            this.components = new System.ComponentModel.Container();
+            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(frmMain));
+            this.menuMain = new System.Windows.Forms.MainMenu(this.components);
+            this.notAreaIcon = new RAD.Windows.NotificationAreaIcon(this.components);
+            this.cmnuTray = new System.Windows.Forms.ContextMenu();
+            this.itmSep1 = new System.Windows.Forms.MenuItem();
+            this.itmHide = new System.Windows.Forms.MenuItem();
+            this.itmSep2 = new System.Windows.Forms.MenuItem();
+            this.itmExit = new System.Windows.Forms.MenuItem();
+            this.ctlClipboardText = new System.Windows.Forms.RichTextBox();
+            this.SuspendLayout();
+            // 
+            // notAreaIcon
+            // 
+            this.notAreaIcon.ContextMenu = this.cmnuTray;
+            this.notAreaIcon.DisplayMenuOnLeftClick = true;
+            this.notAreaIcon.Icon = ((System.Drawing.Icon)(resources.GetObject("notAreaIcon.Icon")));
+            this.notAreaIcon.Tooltip = "CP-1252 Fixer";
+            this.notAreaIcon.Visible = false;
+            this.notAreaIcon.BalloonClick += new System.EventHandler(this.notAreaIcon_BalloonClick);
+            // 
+            // cmnuTray
+            // 
+            this.cmnuTray.MenuItems.AddRange(new System.Windows.Forms.MenuItem[] {
+            this.itmSep1,
+            this.itmHide,
+            this.itmSep2,
+            this.itmExit});
+            // 
+            // itmSep1
+            // 
+            this.itmSep1.Index = 0;
+            this.itmSep1.Text = "-";
+            // 
+            // itmHide
+            // 
+            this.itmHide.Index = 1;
+            this.itmHide.Text = "Hide";
+            this.itmHide.Click += new System.EventHandler(this.itmHide_Click);
+            // 
+            // itmSep2
+            // 
+            this.itmSep2.Index = 2;
+            this.itmSep2.Text = "-";
+            // 
+            // itmExit
+            // 
+            this.itmExit.Index = 3;
+            this.itmExit.MergeOrder = 1000;
+            this.itmExit.Text = "E&xit";
+            // 
+            // ctlClipboardText
+            // 
+            this.ctlClipboardText.DetectUrls = false;
+            this.ctlClipboardText.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.ctlClipboardText.Location = new System.Drawing.Point(0, 0);
+            this.ctlClipboardText.Name = "ctlClipboardText";
+            this.ctlClipboardText.ReadOnly = true;
+            this.ctlClipboardText.Size = new System.Drawing.Size(348, 273);
+            this.ctlClipboardText.TabIndex = 0;
+            this.ctlClipboardText.Text = "";
+            this.ctlClipboardText.WordWrap = false;
+            // 
+            // frmMain
+            // 
+            this.AutoScaleBaseSize = new System.Drawing.Size(6, 15);
+            this.ClientSize = new System.Drawing.Size(348, 273);
+            this.Controls.Add(this.ctlClipboardText);
+            this.Font = new System.Drawing.Font("Tahoma", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
+            this.Location = new System.Drawing.Point(100, 100);
+            this.Menu = this.menuMain;
+            this.Name = "frmMain";
+            this.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
+            this.Text = "CP-1252 Fixer";
+            this.Load += new System.EventHandler(this.frmMain_Load);
+            this.Closing += new System.ComponentModel.CancelEventHandler(this.frmMain_Closing);
+            this.Resize += new System.EventHandler(this.frmMain_Resize);
+            this.ResumeLayout(false);
 
 		}
 		#endregion

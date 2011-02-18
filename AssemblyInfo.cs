@@ -6,13 +6,13 @@ using System.Runtime.CompilerServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 //
-[assembly: AssemblyTitle("Clipboard Monitor Example")]
-[assembly: AssemblyDescription("Clipboard Monitor Example")]
+[assembly: AssemblyTitle("CP-1252 Fixer")]
+[assembly: AssemblyDescription("Cleans Windows-1252 quotes (often inserted by Word etc) for web-friendly input")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("Rad Software")]
-[assembly: AssemblyProduct("")]
-[assembly: AssemblyCopyright("Copyright (c) Ross Donald")]
-[assembly: AssemblyTrademark("http://www.radsoftware.com.au")]
+[assembly: AssemblyCompany("Spadgos")]
+[assembly: AssemblyProduct("http://github.com/pospi/cp1252fixer/")]
+[assembly: AssemblyCopyright("(c) Sam Pospischil\r\nBased on work originally by Ross Donald of Rad Software (http://www.radsoftware.com.au)")]
+[assembly: AssemblyTrademark("http://pospi.spadgos.com")]
 [assembly: AssemblyCulture("")]		
 
 //
@@ -26,7 +26,7 @@ using System.Runtime.CompilerServices;
 // You can specify all the values or you can default the Revision and Build Numbers 
 // by using the '*' as shown below:
 
-[assembly: AssemblyVersion("1.1.*")]
+[assembly: AssemblyVersion("1.0.*")]
 
 [assembly: AssemblyDelaySign(false)]
 [assembly: AssemblyKeyFile("")]
