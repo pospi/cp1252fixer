@@ -7,6 +7,7 @@ using System.Data;
 using System.Text.RegularExpressions;
 using System.Diagnostics;
 using System.IO;
+using System.Collections.Generic;
 
 using RAD.ClipMon.Win32;
 using RAD.Windows;
@@ -35,6 +36,48 @@ namespace pospi.CP1252
 	/// </remarks>
 	public class frmMain : System.Windows.Forms.Form
 	{
+        #region Character Mappings
+
+        Dictionary<int, String> smartQuotesTranslate = new Dictionary<int, String>()
+        {
+            { 0x201A, ","},
+            { 0x201E, ",,"},
+            { 0x2018, "\'"},
+            { 0x2019, "\'"},
+            { 0x201C, "\""},
+            { 0x201D, "\""},
+            { 0x2022, "-"},
+            { 0x2013, "-"},
+            { 0x2014, "-"},
+            { 0x2026, "..."}
+        };
+
+        Dictionary<int, String> smartQuotesEscape = new Dictionary<int, String>()
+        {
+            { 0x201A, "&sbquo;"},
+            { 0x201E, "&bdquo;"},
+            { 0x2018, "&lsquo;"},
+            { 0x2019, "&rsquo;"},
+            { 0x201C, "&ldquo;"},
+            { 0x201D, "&rdquo;"},
+            { 0x2022, "&bull;"},
+            { 0x2013, "&ndash;"},
+            { 0x2014, "&mdash;"},
+            { 0x2026, "&hellip;"}
+        };
+
+        Dictionary<int, String> namedEntityEscape = new Dictionary<int, String>()
+        {
+
+        };
+
+        Dictionary<int, String> allEntityEscape = new Dictionary<int, String>()
+        {
+
+        };
+
+        #endregion
+
         #region Constants
 
 
@@ -78,10 +121,9 @@ namespace pospi.CP1252
         #region Properties - Private
 
         private String _rawClip;        // untouched clipboard data (RTF or text)
-        private String _currentClip;    // current clipboard text (converted to string)
         private String _modifiedClip;   // clipboard text with replacements made
 
-        // an option in the context menu
+        // an option in the context menu along with its current status
         private struct optionFlag
         {
             public bool active;
@@ -126,12 +168,49 @@ namespace pospi.CP1252
 		/// </summary>
 		/// <param name="iData">The current clipboard contents</param>
 		/// <returns>true if characters were replaced, false otherwise</returns>
-        private bool replaceQuotes(String clipContents)
+        private bool replaceQuotes()
         {
             bool found = false;
 
-            // :TODO: pretty much everything
-            _modifiedClip = _currentClip;
+            _modifiedClip = _rawClip;
+
+            if (CMOptions[4].active)        // convert to plaintext
+            {
+                _modifiedClip = convertRTFToString(_rawClip);
+                found = true;
+            }
+
+            if (CMOptions[0].active)        // replace smart quotes
+            {
+                Dictionary<int, String> replacementsToRun;
+
+                if (CMOptions[1].active)    // replace them with entity refs instead of low-ASCII equivalents
+                {
+                    replacementsToRun = smartQuotesEscape;
+                }
+                else
+                {
+                    replacementsToRun = smartQuotesTranslate;
+                }
+                if (runReplacements(replacementsToRun))
+                {
+                    found = true;
+                }
+            }
+            if (CMOptions[2].active)        // replace named entities
+            {
+                if (runReplacements(namedEntityEscape))
+                {
+                    found = true;
+                }
+            }
+            if (CMOptions[3].active)        // replace all high ASCII
+            {
+                if (runReplacements(allEntityEscape))
+                {
+                    found = true;
+                }
+            }
 
             return found;
         }
@@ -149,11 +228,7 @@ namespace pospi.CP1252
 			    {
                     _rawClip = (string)iData.GetData(DataFormats.Rtf);
 
-                    // convert RTF data to plainText using a RichTextBox
-                    System.Windows.Forms.RichTextBox rtBox = new System.Windows.Forms.RichTextBox();
-                    rtBox.Rtf = (string)_rawClip;
-                    contents = rtBox.Text;
-
+                    contents = convertRTFToString(_rawClip);
 				    setNotificationTooltip("RTF copied");
 			    }
                 else if (iData.GetDataPresent(DataFormats.Text))
@@ -169,6 +244,36 @@ namespace pospi.CP1252
 			}
             return contents;
 		}
+
+        // convert RTF data to plainText using a RichTextBox
+        private String convertRTFToString(String str)
+        {
+            System.Windows.Forms.RichTextBox rtBox = new System.Windows.Forms.RichTextBox();
+            try
+            {
+                rtBox.Rtf = (string)str;
+            }
+            catch (Exception e)
+            {
+                return str;     // already a plaintext string
+            }
+            return rtBox.Text;
+        }
+
+        private bool runReplacements(Dictionary<int, String> repls)
+        {
+            bool found = false;
+            foreach (KeyValuePair<int, String> replacement in repls)
+            {
+                String search = Char.ConvertFromUtf32(replacement.Key);
+                String changed = _modifiedClip.Replace(search, replacement.Value);
+                if (!found && changed != _modifiedClip) {
+                    found = true;
+                }
+                _modifiedClip = changed;
+            }
+            return found;
+        }
 
         private void setNotificationTooltip(String tt)
         {
@@ -203,10 +308,10 @@ namespace pospi.CP1252
 				return;
 			}
 
-            _currentClip = getClipAsString(iData);
+            String strClip = getClipAsString(iData);  // this also assigns _rawClip
             
             // show current clipboard text even if there was no match
-            if (_currentClip != "")
+            if (strClip != "")
             {
                 if (iData.GetDataPresent(DataFormats.Rtf))
                 {
@@ -218,7 +323,7 @@ namespace pospi.CP1252
                 }
             }
 
-            if (replaceQuotes(_currentClip))
+            if (replaceQuotes())
 			{
 				// bad quotes were found and have be purged, so update the text with the fixed one
                 ctlClipboardText.Text = _modifiedClip;
@@ -226,7 +331,7 @@ namespace pospi.CP1252
 				notifyIcon1.ShowBalloonTip(
                     1000, 
                     "Characters fixed", 
-                    "Click to view or modify the clipboard contents",
+                    "Click to view the clipboard contents",
                     ToolTipIcon.Info
                 );
 			}
@@ -400,7 +505,7 @@ namespace pospi.CP1252
 
         private void notifyIcon1_BalloonTipClicked(object sender, EventArgs e)
         {
-            
+            this.Show();
         }
 
         private void toggleWindow()
