@@ -11,7 +11,7 @@ using System.IO;
 using RAD.ClipMon.Win32;
 using RAD.Windows;
 
-namespace RAD.ClipMon
+namespace pospi.CP1252
 {
 	/// <summary>
     /// Code Page 1252 Fixer
@@ -77,9 +77,25 @@ namespace RAD.ClipMon
 
         #region Properties - Private
 
-        private String _rawClip;
-        private String _currentClip;
-        private String _modifiedClip;
+        private String _rawClip;        // untouched clipboard data (RTF or text)
+        private String _currentClip;    // current clipboard text (converted to string)
+        private String _modifiedClip;   // clipboard text with replacements made
+
+        // an option in the context menu
+        private struct optionFlag
+        {
+            public bool active;
+            public String text;
+        }
+
+        // context menu options and app state
+        private optionFlag[] CMOptions = new optionFlag[] {
+            new optionFlag() { active = true,   text = "Replace \'smart quotes\'" },
+            new optionFlag() { active = false,  text = "Keep \'smart quotes\' as entities" },
+            new optionFlag() { active = true,   text = "Replace all named HTML entities" },
+            new optionFlag() { active = true,   text = "Convert all high ASCII to numbered entities" },
+            new optionFlag() { active = false,  text = "Convert rich text to plaintext" }
+        };
 
         private Queue _history = new Queue();
         private IntPtr _ClipboardViewerNext;
@@ -94,7 +110,7 @@ namespace RAD.ClipMon
 		/// </summary>
 		private void RegisterClipboardViewer()
 		{
-			_ClipboardViewerNext = Win32.User32.SetClipboardViewer(this.Handle);
+			_ClipboardViewerNext = RAD.ClipMon.Win32.User32.SetClipboardViewer(this.Handle);
 		}
 
 		/// <summary>
@@ -102,7 +118,7 @@ namespace RAD.ClipMon
 		/// </summary>
 		private void UnregisterClipboardViewer()
 		{
-			Win32.User32.ChangeClipboardChain(this.Handle, _ClipboardViewerNext);
+            RAD.ClipMon.Win32.User32.ChangeClipboardChain(this.Handle, _ClipboardViewerNext);
 		}
 
 		/// <summary>
@@ -152,23 +168,6 @@ namespace RAD.ClipMon
 				MessageBox.Show(ex.ToString());
 			}
             return contents;
-		}
-
-		/// <summary>
-		/// Build the system tray menu from the hyperlink list
-		/// </summary>
-		private void ContextMenuBuild()
-		{
-			cmnuTray.MenuItems.Clear();
-
-			// :TODO: add mode options
-
-			cmnuTray.MenuItems.Add("-");
-			cmnuTray.MenuItems.Add("Cancel Menu", new EventHandler(itmCancelMenu_Click));
-			cmnuTray.MenuItems.Add("-");
-			cmnuTray.MenuItems.Add(itmHide.Text, new EventHandler(itmHide_Click));
-			cmnuTray.MenuItems.Add("-");
-			cmnuTray.MenuItems.Add("E&xit", new EventHandler(itmExit_Click));
 		}
 
         private void setNotificationTooltip(String tt)
@@ -250,7 +249,7 @@ namespace RAD.ClipMon
 
 		protected override void WndProc(ref Message m)
 		{
-			switch ((Win32.Msgs)m.Msg)
+            switch ((RAD.ClipMon.Win32.Msgs)m.Msg)
 			{
 					//
 					// The WM_DRAWCLIPBOARD message is sent to the first window 
@@ -258,7 +257,7 @@ namespace RAD.ClipMon
 					// clipboard changes. This enables a clipboard viewer 
 					// window to display the new content of the clipboard. 
 					//
-				case Win32.Msgs.WM_DRAWCLIPBOARD:
+                case RAD.ClipMon.Win32.Msgs.WM_DRAWCLIPBOARD:
 					
 					Debug.WriteLine("WindowProc DRAWCLIPBOARD: " + m.Msg, "WndProc");
 
@@ -269,7 +268,7 @@ namespace RAD.ClipMon
 					// must call the SendMessage function to pass the message 
 					// on to the next window in the clipboard viewer chain.
 					//
-					Win32.User32.SendMessage(_ClipboardViewerNext, m.Msg, m.WParam, m.LParam);
+                    RAD.ClipMon.Win32.User32.SendMessage(_ClipboardViewerNext, m.Msg, m.WParam, m.LParam);
 					break;
 
 
@@ -278,7 +277,7 @@ namespace RAD.ClipMon
 					// in the clipboard viewer chain when a window is being 
 					// removed from the chain. 
 					//
-				case Win32.Msgs.WM_CHANGECBCHAIN:
+                case RAD.ClipMon.Win32.Msgs.WM_CHANGECBCHAIN:
 					Debug.WriteLine("WM_CHANGECBCHAIN: lParam: " + m.LParam, "WndProc");
 
 					// When a clipboard viewer window receives the WM_CHANGECBCHAIN message, 
@@ -303,7 +302,7 @@ namespace RAD.ClipMon
 					}
 					else
 					{
-						Win32.User32.SendMessage(_ClipboardViewerNext, m.Msg, m.WParam, m.LParam);
+                        RAD.ClipMon.Win32.User32.SendMessage(_ClipboardViewerNext, m.Msg, m.WParam, m.LParam);
 					}
 					break;
 
@@ -324,10 +323,10 @@ namespace RAD.ClipMon
 
 		#region Event Handlers - Menu
 
-		private void itmExit_Click(object sender, EventArgs e)
-		{
-			this.Close();
-		}
+        private void itmExit_Click_1(object sender, EventArgs e)
+        {
+            this.Close();
+        }
 
 		private void itmHide_Click(object sender, System.EventArgs e)
 		{
@@ -339,10 +338,6 @@ namespace RAD.ClipMon
             if (e.Button == MouseButtons.Left)
             {
                 toggleWindow();    // toggle window when double clicked
-            }
-            else
-            {
-
             }
         }
 
@@ -359,7 +354,21 @@ namespace RAD.ClipMon
 				this.Visible = false;
 				itmHide.Text = "Show";
 			}
-		}
+        }
+
+        private void clipboardOptionChange(object sender, EventArgs e)
+        {
+            MenuItem clicked = (System.Windows.Forms.MenuItem)sender;
+            for (int i = 0; i < CMOptions.Length; ++i)
+            {
+                if (CMOptions[i].text == clicked.Text)
+                {
+                    clicked.Checked = !clicked.Checked;
+                    CMOptions[i].active = clicked.Checked;
+                    ProcessClipboard();
+                }
+            }
+        }
 
 		#endregion
 
@@ -367,7 +376,20 @@ namespace RAD.ClipMon
 		#region Event Handlers - Internal
 
 		private void frmMain_Load(object sender, System.EventArgs e)
-		{
+        {
+            this.cmnuTray.MenuItems.Clear();
+            foreach (optionFlag option in CMOptions)
+            {
+                var it = new System.Windows.Forms.MenuItem(option.text);
+                it.Checked = option.active;
+                it.Click += new EventHandler(clipboardOptionChange);
+                this.cmnuTray.MenuItems.Add(it);
+            }
+            this.cmnuTray.MenuItems.Add(itmSep1);
+            this.cmnuTray.MenuItems.Add(itmHide);
+            this.cmnuTray.MenuItems.Add(itmSep2);
+            this.cmnuTray.MenuItems.Add(itmExit);
+
 			RegisterClipboardViewer();
 		}
 
@@ -466,6 +488,7 @@ namespace RAD.ClipMon
             this.itmExit.Index = 3;
             this.itmExit.MergeOrder = 1000;
             this.itmExit.Text = "E&xit";
+            this.itmExit.Click += new System.EventHandler(this.itmExit_Click_1);
             // 
             // ctlClipboardText
             // 
@@ -481,13 +504,12 @@ namespace RAD.ClipMon
             // 
             // notifyIcon1
             // 
+            this.notifyIcon1.ContextMenu = this.cmnuTray;
             this.notifyIcon1.Icon = ((System.Drawing.Icon)(resources.GetObject("notifyIcon1.Icon")));
             this.notifyIcon1.Text = "CP1252 Fixer";
             this.notifyIcon1.Visible = true;
             this.notifyIcon1.BalloonTipClicked += new System.EventHandler(this.notifyIcon1_BalloonTipClicked);
             this.notifyIcon1.MouseClick += new System.Windows.Forms.MouseEventHandler(this.notifyIcon1_MouseClick);
-
-            this.notifyIcon1.ContextMenu = cmnuTray;
             // 
             // frmMain
             // 
