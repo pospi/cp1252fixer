@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using System.Diagnostics;
 using System.IO;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 
 using RAD.ClipMon.Win32;
 using RAD.Windows;
@@ -64,7 +65,7 @@ namespace pospi.CP1252
             { 0x2013, "&ndash;"},
             { 0x2014, "&mdash;"},
             { 0x2026, "&hellip;"},
-            { 188, "&frac14;"},       // also escape fractions as they are auto-inserted by Word
+            { 188, "&frac14;"},       // we also escape fractions as they are auto-inserted by Word
             { 189, "&frac12;"},
             { 190, "&frac34;"}
         };
@@ -510,9 +511,9 @@ namespace pospi.CP1252
                     contents = convertRTFToString(_rawClip);
 				    setNotificationTooltip("RTF copied");
 			    }
-                else if (iData.GetDataPresent(DataFormats.Text))
+                else if (iData.GetDataPresent(DataFormats.UnicodeText))
                 {
-                    _rawClip = (string)iData.GetData(DataFormats.Text);
+                    _rawClip = (string)iData.GetData(DataFormats.UnicodeText);
                     contents = _rawClip;
                     setNotificationTooltip("Text copied");
                 }
@@ -598,8 +599,36 @@ namespace pospi.CP1252
                     "Click to view the clipboard contents",
                     ToolTipIcon.Info
                 );
+
+                storeToClipboard(iData.GetDataPresent(DataFormats.Rtf));
 			}
 		}
+
+        private void storeToClipboard(bool asRTF)
+        {
+            String df;
+            if (asRTF)
+            {
+                df = DataFormats.Rtf;
+            }
+            else
+            {
+                df = DataFormats.UnicodeText;
+            }
+            try
+            {
+                Clipboard.SetData(df, _modifiedClip);
+            }
+            catch (ExternalException e)
+            {
+                 notifyIcon1.ShowBalloonTip(
+                     1000,
+                     "Character fix failed",
+                     "The clipboard was in use by another application and could not be written to.\nClick to copy the modified text manually.",
+                     ToolTipIcon.Error
+                 );
+            }
+        }
 
 		#endregion
 
