@@ -52,8 +52,8 @@ namespace RAD.ClipMon
 		private System.Windows.Forms.MenuItem itmExit;
 		private System.Windows.Forms.MenuItem itmHide;
 		private System.Windows.Forms.MenuItem itmSep2;
+        private NotifyIcon notifyIcon1;
         private System.Windows.Forms.MenuItem itmSep1;
-		private RAD.Windows.NotificationAreaIcon notAreaIcon;
 
 		#endregion
 
@@ -62,8 +62,8 @@ namespace RAD.ClipMon
 
 		public frmMain()
 		{
-			InitializeComponent();	
-			notAreaIcon.Visible = true;
+			InitializeComponent();
+            notifyIcon1.Visible = true;
 		}
 
 		#endregion
@@ -173,7 +173,7 @@ namespace RAD.ClipMon
 
         private void setNotificationTooltip(String tt)
         {
-            notAreaIcon.Tooltip = tt;
+            notifyIcon1.Text = tt;
         }
 
 		/// <summary>
@@ -224,7 +224,12 @@ namespace RAD.ClipMon
 				// bad quotes were found and have be purged, so update the text with the fixed one
                 ctlClipboardText.Text = _modifiedClip;
 
-				notAreaIcon.BalloonDisplay(NotificationAreaIcon.NOTIFYICONdwInfoFlags.NIIF_INFO, "Characters fixed", "Click to view or modify the clipboard contents");
+				notifyIcon1.ShowBalloonTip(
+                    1000, 
+                    "Characters fixed", 
+                    "Click to view or modify the clipboard contents",
+                    ToolTipIcon.Info
+                );
 			}
 		}
 
@@ -326,17 +331,20 @@ namespace RAD.ClipMon
 
 		private void itmHide_Click(object sender, System.EventArgs e)
 		{
-			this.Visible = (! this.Visible);
-			itmHide.Text = this.Visible ? "Hide" : "Show";
+            toggleWindow();
+        }
 
-			if (this.Visible == true)
-			{
-				if (this.WindowState == FormWindowState.Minimized)
-				{
-					this.WindowState = FormWindowState.Normal;
-				}
-			}
-		}
+        private void notifyIcon1_MouseClick(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                toggleWindow();    // toggle window when double clicked
+            }
+            else
+            {
+
+            }
+        }
 
 		private void itmCancelMenu_Click(object sender, System.EventArgs e)
 		{
@@ -368,10 +376,24 @@ namespace RAD.ClipMon
 			UnregisterClipboardViewer();
 		}
 
-		private void notAreaIcon_BalloonClick(object sender, System.EventArgs e)
-		{
-			notAreaIcon.ContextMenuDisplay();
-		}
+        private void notifyIcon1_BalloonTipClicked(object sender, EventArgs e)
+        {
+            
+        }
+
+        private void toggleWindow()
+        {
+            this.Visible = (!this.Visible);
+            itmHide.Text = this.Visible ? "Hide" : "Show";
+
+            if (this.Visible == true)
+            {
+                if (this.WindowState == FormWindowState.Minimized)
+                {
+                    this.WindowState = FormWindowState.Normal;
+                }
+            }
+        }
 
 		#endregion
 
@@ -406,23 +428,14 @@ namespace RAD.ClipMon
             this.components = new System.ComponentModel.Container();
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(frmMain));
             this.menuMain = new System.Windows.Forms.MainMenu(this.components);
-            this.notAreaIcon = new RAD.Windows.NotificationAreaIcon(this.components);
             this.cmnuTray = new System.Windows.Forms.ContextMenu();
             this.itmSep1 = new System.Windows.Forms.MenuItem();
             this.itmHide = new System.Windows.Forms.MenuItem();
             this.itmSep2 = new System.Windows.Forms.MenuItem();
             this.itmExit = new System.Windows.Forms.MenuItem();
             this.ctlClipboardText = new System.Windows.Forms.RichTextBox();
+            this.notifyIcon1 = new System.Windows.Forms.NotifyIcon(this.components);
             this.SuspendLayout();
-            // 
-            // notAreaIcon
-            // 
-            this.notAreaIcon.ContextMenu = this.cmnuTray;
-            this.notAreaIcon.DisplayMenuOnLeftClick = true;
-            this.notAreaIcon.Icon = ((System.Drawing.Icon)(resources.GetObject("notAreaIcon.Icon")));
-            this.notAreaIcon.Tooltip = "CP-1252 Fixer";
-            this.notAreaIcon.Visible = false;
-            this.notAreaIcon.BalloonClick += new System.EventHandler(this.notAreaIcon_BalloonClick);
             // 
             // cmnuTray
             // 
@@ -465,6 +478,16 @@ namespace RAD.ClipMon
             this.ctlClipboardText.TabIndex = 0;
             this.ctlClipboardText.Text = "";
             this.ctlClipboardText.WordWrap = false;
+            // 
+            // notifyIcon1
+            // 
+            this.notifyIcon1.Icon = ((System.Drawing.Icon)(resources.GetObject("notifyIcon1.Icon")));
+            this.notifyIcon1.Text = "CP1252 Fixer";
+            this.notifyIcon1.Visible = true;
+            this.notifyIcon1.BalloonTipClicked += new System.EventHandler(this.notifyIcon1_BalloonTipClicked);
+            this.notifyIcon1.MouseClick += new System.Windows.Forms.MouseEventHandler(this.notifyIcon1_MouseClick);
+
+            this.notifyIcon1.ContextMenu = cmnuTray;
             // 
             // frmMain
             // 
