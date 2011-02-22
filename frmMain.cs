@@ -641,6 +641,7 @@ namespace pospi.CP1252
         private void storeToClipboard(bool asRTF)
         {
             String df;
+            String err = null;
             if (asRTF)
             {
                 df = DataFormats.Rtf;
@@ -655,12 +656,20 @@ namespace pospi.CP1252
             }
             catch (ExternalException e)
             {
-                 notifyIcon1.ShowBalloonTip(
-                     1000,
-                     "Character fix failed",
-                     "The clipboard was in use by another application and could not be written to.\nClick to copy the modified text manually.",
-                     ToolTipIcon.Error
-                 );
+                err = "The clipboard was in use by another application and could not be written to.\nClick to copy the modified text manually.";
+            }
+            catch (System.Threading.ThreadStateException e)
+            {
+                err = "The clipboard cannot be pasted to as you are not running this application in single-threaded apartment mode.";
+            }
+            if (err != null)
+            {
+                notifyIcon1.ShowBalloonTip(
+                    1000,
+                    "Character fix failed",
+                    err,
+                    ToolTipIcon.Error
+                );
             }
         }
 
