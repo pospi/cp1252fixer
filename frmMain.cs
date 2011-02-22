@@ -517,6 +517,10 @@ namespace pospi.CP1252
                     contents = _rawClip;
                     setNotificationTooltip("Text copied");
                 }
+                if (_rawClip == null)   // nothing was on the clipboard
+                {
+                    _rawClip = "";
+                }
             }
 			catch (Exception ex)
 			{
