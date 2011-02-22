@@ -343,6 +343,7 @@ namespace pospi.CP1252
 		private System.Windows.Forms.MenuItem itmSep2;
         private NotifyIcon notifyIcon1;
         private System.Windows.Forms.MenuItem itmSep1;
+        private ToolTip toolTip1;
 
 		#endregion
 
@@ -374,15 +375,44 @@ namespace pospi.CP1252
         {
             public bool active;
             public String text;
+            public String shorttext;
+            public String desc;
+            public MenuItem menuItem;
+            public CheckBox buttonToggle;
         }
 
         // context menu options and app state
         private optionFlag[] CMOptions = new optionFlag[] {
-            new optionFlag() { active = true,   text = "Replace \'smart quotes\'" },
-            new optionFlag() { active = false,  text = "Keep \'smart quotes\' as entities" },
-            new optionFlag() { active = true,   text = "Replace all named HTML entities" },
-            new optionFlag() { active = true,   text = "Convert all high ASCII to numbered entities" },
-            new optionFlag() { active = false,  text = "Convert rich text to plaintext" }
+            new optionFlag() { 
+                active = true,
+                text = "Replace \'smart quotes\'",
+                shorttext = "” -> \"",
+                desc = "Replaces quote characters added by MS Word, some versions\nof Outlook and others with ASCII equivalent quotes. This replaces\nsingle and double quotes, dashes, bulletpoints and the ellipsis character."
+            },
+            new optionFlag() { 
+                active = false,  
+                text = "Keep \'smart quotes\' as entities",
+                shorttext = "” -> &&ldquo;",
+                desc = "Replaces single and double quotes, dashes, bulletpoints\nand the ellipsis character with HTML entity references.\nUse this to preserve these characters in an ISO-8859-1\nencoded website rather than converting them."
+            },
+            new optionFlag() { 
+                active = true,   
+                text = "Replace all named HTML entities",
+                shorttext = "Named",
+                desc = "Any characters (except for double quotes and HTML brackets)\nwith named HTML entities are converted to those entity codes."
+            },
+            new optionFlag() { 
+                active = true,   
+                text = "Convert all high ASCII to numbered entities" ,
+                shorttext = "Numbered",
+                desc = "Any characters above the standard ASCII range (0x9F) are\nreplaced with HTML entity numbers.\nThis will ensure any strange characters (even Chinese, Korean etc)\nare preserved in an ISO-8859-1 document."
+            },
+            new optionFlag() { 
+                active = false,  
+                text = "Convert rich text to plaintext",
+                shorttext = "RTF -> Plain",
+                desc = "Convert text copied with formatting to be plaintext.\nMost often the text will be converted on pasting into\na plaintext application, but you can force this here if you wish."
+            }
         };
 
         private Queue _history = new Queue();
@@ -767,6 +797,22 @@ namespace pospi.CP1252
                 {
                     clicked.Checked = !clicked.Checked;
                     CMOptions[i].active = clicked.Checked;
+                    CMOptions[i].buttonToggle.Checked = clicked.Checked;
+                    ProcessClipboard();
+                }
+            }
+        }
+
+        // can't be bothered making this generic, to be honest :p
+        private void clipboardOptionBtnChange(object sender, EventArgs e)
+        {
+            CheckBox clicked = (System.Windows.Forms.CheckBox)sender;
+            for (int i = 0; i < CMOptions.Length; ++i)
+            {
+                if (CMOptions[i].shorttext == clicked.Text)
+                {
+                    CMOptions[i].active = clicked.Checked;
+                    CMOptions[i].menuItem.Checked = clicked.Checked;
                     ProcessClipboard();
                 }
             }
@@ -779,13 +825,40 @@ namespace pospi.CP1252
 
 		private void frmMain_Load(object sender, System.EventArgs e)
         {
+            // Help for the options
+            toolTip1 = new ToolTip();
+            toolTip1.AutoPopDelay = 5000;
+            toolTip1.InitialDelay = 500;
+            toolTip1.ReshowDelay = 500;
+
             this.cmnuTray.MenuItems.Clear();
-            foreach (optionFlag option in CMOptions)
+
+            for (int i = 0; i < CMOptions.Length; ++i)
             {
-                var it = new System.Windows.Forms.MenuItem(option.text);
+                optionFlag option = CMOptions[i];
+
+                // add system tray menuitem
+                MenuItem it = new System.Windows.Forms.MenuItem(option.text);
                 it.Checked = option.active;
                 it.Click += new EventHandler(clipboardOptionChange);
                 this.cmnuTray.MenuItems.Add(it);
+
+                // add form button
+                CheckBox btn = new System.Windows.Forms.CheckBox();
+                btn.Appearance = System.Windows.Forms.Appearance.Button;
+                btn.Location = new System.Drawing.Point(8, 8 + i * 32);
+                btn.Name = "btn" + i;
+                btn.Size = new System.Drawing.Size(95, 23);
+                btn.TabIndex = 1;
+                btn.UseVisualStyleBackColor = true;
+                btn.Text = option.shorttext;
+                toolTip1.SetToolTip(btn, option.desc);
+                btn.Checked = option.active;
+                btn.Click += new EventHandler(clipboardOptionBtnChange);
+                this.Controls.Add(btn);
+
+                CMOptions[i].menuItem = it;
+                CMOptions[i].buttonToggle = btn;
             }
             this.cmnuTray.MenuItems.Add(itmSep1);
             this.cmnuTray.MenuItems.Add(itmHide);
@@ -894,12 +967,12 @@ namespace pospi.CP1252
             // 
             // ctlClipboardText
             // 
+            this.ctlClipboardText.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
             this.ctlClipboardText.DetectUrls = false;
-            this.ctlClipboardText.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.ctlClipboardText.Location = new System.Drawing.Point(0, 0);
+            this.ctlClipboardText.Location = new System.Drawing.Point(109, 0);
             this.ctlClipboardText.Name = "ctlClipboardText";
             this.ctlClipboardText.ReadOnly = true;
-            this.ctlClipboardText.Size = new System.Drawing.Size(348, 273);
+            this.ctlClipboardText.Size = new System.Drawing.Size(375, 273);
             this.ctlClipboardText.TabIndex = 0;
             this.ctlClipboardText.Text = "";
             this.ctlClipboardText.WordWrap = false;
@@ -916,7 +989,7 @@ namespace pospi.CP1252
             // frmMain
             // 
             this.AutoScaleBaseSize = new System.Drawing.Size(6, 15);
-            this.ClientSize = new System.Drawing.Size(348, 273);
+            this.ClientSize = new System.Drawing.Size(484, 273);
             this.Controls.Add(this.ctlClipboardText);
             this.Font = new System.Drawing.Font("Tahoma", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
