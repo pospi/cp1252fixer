@@ -367,8 +367,10 @@ namespace pospi.CP1252
 
         #region Properties - Private
 
-        private String _rawClip;        // untouched clipboard data (RTF or text)
+        private String _rawClip;        // raw clipboard data
         private String _modifiedClip;   // clipboard text with replacements made
+
+        private bool clipInserting = false; // true when pasting BACK into clipboard
 
         // an option in the context menu along with its current status
         private struct optionFlag
@@ -415,7 +417,6 @@ namespace pospi.CP1252
             }
         };
 
-        private Queue _history = new Queue();
         private IntPtr _ClipboardViewerNext;
 
         #endregion
@@ -614,7 +615,15 @@ namespace pospi.CP1252
             {
                 if (iData.GetDataPresent(DataFormats.Rtf))
                 {
-                    ctlClipboardText.Rtf = _rawClip;   // but show the original RTF formatted string where appropriate
+                    try
+                    {
+                        ctlClipboardText.Rtf = _rawClip;   // but show the original RTF formatted string where appropriate
+                    }
+                    catch (Exception e)
+                    {
+                        // sometimes this fails when converting from RTF to plaintext and back again
+                        ctlClipboardText.Text = _rawClip;
+                    }
                 }
                 else
                 {
@@ -634,7 +643,9 @@ namespace pospi.CP1252
                     ToolTipIcon.Info
                 );
 
+                clipInserting = true;
                 storeToClipboard(iData.GetDataPresent(DataFormats.Rtf));
+                clipInserting = false;
 			}
 		}
 
@@ -702,7 +713,10 @@ namespace pospi.CP1252
 					
 					Debug.WriteLine("WindowProc DRAWCLIPBOARD: " + m.Msg, "WndProc");
 
-                    ProcessClipboard();
+                    if (!clipInserting)
+                    {
+                        ProcessClipboard();
+                    }
 
 					//
 					// Each window that receives the WM_DRAWCLIPBOARD message 
