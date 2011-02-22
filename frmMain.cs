@@ -898,6 +898,8 @@ namespace pospi.CP1252
                 {
                     this.WindowState = FormWindowState.Normal;
                 }
+                this.TopMost = true;    // toggling this brings the window to the top of the z-order
+                this.TopMost = false;
             }
         }
 
