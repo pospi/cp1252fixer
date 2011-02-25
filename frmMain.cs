@@ -367,6 +367,7 @@ namespace pospi.CP1252
 
         #region Properties - Private
 
+		private bool _copiedRTF = false;	// true if RTF was copied rather than text
         private String _rawClip;        // raw clipboard data
         private String _modifiedClip;   // clipboard text with replacements made
 
@@ -538,6 +539,7 @@ namespace pospi.CP1252
 			    if (iData.GetDataPresent(DataFormats.Rtf))
 			    {
                     _rawClip = (string)iData.GetData(DataFormats.Rtf);
+					_copiedRTF = true;
 
                     contents = convertRTFToString(_rawClip);
 				    setNotificationTooltip("RTF copied");
@@ -545,6 +547,8 @@ namespace pospi.CP1252
                 else if (iData.GetDataPresent(DataFormats.UnicodeText))
                 {
                     _rawClip = (string)iData.GetData(DataFormats.UnicodeText);
+					_copiedRTF = false;
+					
                     contents = _rawClip;
                     setNotificationTooltip("Text copied");
                 }
@@ -608,12 +612,12 @@ namespace pospi.CP1252
 				return;
 			}
 
-            String strClip = getClipAsString(iData);  // this also assigns _rawClip
+            String strClip = getClipAsString(iData);  // this also assigns _rawClip and _copiedRTF
             
             // show current clipboard text even if there was no match
             if (strClip != "")
             {
-                if (iData.GetDataPresent(DataFormats.Rtf))
+                if (_copiedRTF)
                 {
                     try
                     {
@@ -633,8 +637,15 @@ namespace pospi.CP1252
 
             if (replaceQuotes())
 			{
+                bool rtfOutput = _copiedRTF && !CMOptions[4].active;
+
 				// bad quotes were found and have be purged, so update the text with the fixed one
-                ctlClipboardText.Text = _modifiedClip;
+                if (rtfOutput)
+                {
+					ctlClipboardText.Rtf = _modifiedClip;
+				} else {
+					ctlClipboardText.Text = _modifiedClip;
+				}
 
 				notifyIcon1.ShowBalloonTip(
                     1000, 
@@ -644,26 +655,30 @@ namespace pospi.CP1252
                 );
 
                 clipInserting = true;
-                storeToClipboard(iData.GetDataPresent(DataFormats.Rtf));
+                storeToClipboard(_modifiedClip, rtfOutput);
                 clipInserting = false;
 			}
 		}
 
-        private void storeToClipboard(bool asRTF)
+        private void storeToClipboard(String value, bool asRTF)
         {
-            String df;
             String err = null;
+            IDataObject ido = new DataObject();
+
             if (asRTF)
             {
-                df = DataFormats.Rtf;
+                // also set clipboard text property
+                String temp = convertRTFToString(_modifiedClip);
+                ido.SetData(DataFormats.UnicodeText, true, temp);
+                ido.SetData(DataFormats.Rtf, true, _modifiedClip);
             }
             else
             {
-                df = DataFormats.UnicodeText;
+                ido.SetData(DataFormats.UnicodeText, true, _modifiedClip);
             }
             try
             {
-                Clipboard.SetData(df, _modifiedClip);
+                Clipboard.SetDataObject(ido, true);
             }
             catch (ExternalException e)
             {
