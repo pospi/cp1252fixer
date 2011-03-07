@@ -109,6 +109,7 @@
     <Compile Include="frmMain.cs">
       <SubType>Form</SubType>
     </Compile>
+    <Compile Include="iniParser.cs" />
     <Compile Include="Shell32.cs">
       <SubType>Code</SubType>
     </Compile>

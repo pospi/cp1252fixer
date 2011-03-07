@@ -905,12 +905,11 @@ namespace pospi.CP1252
             {
                 if (CMOptions[i].text == clicked.Text)
                 {
-                    clicked.Checked = !clicked.Checked;
-                    CMOptions[i].active = clicked.Checked;
-                    CMOptions[i].buttonToggle.Checked = clicked.Checked;
-                    ProcessClipboard();
+                    clicked.Checked = !clicked.Checked; 
+                    setOption(ref CMOptions[i], clicked.Checked);
                 }
             }
+            ProcessClipboard();
         }
 
         // can't be bothered making this generic, to be honest :p
@@ -921,11 +920,17 @@ namespace pospi.CP1252
             {
                 if (CMOptions[i].shorttext == clicked.Text)
                 {
-                    CMOptions[i].active = clicked.Checked;
-                    CMOptions[i].menuItem.Checked = clicked.Checked;
-                    ProcessClipboard();
+                    setOption(ref CMOptions[i], clicked.Checked);
                 }
             }
+            ProcessClipboard();
+        }
+
+        private void setOption(ref optionFlag option, bool enabled)
+        {
+            option.active = enabled;
+            option.menuItem.Checked = enabled;
+            option.buttonToggle.Checked = enabled;
         }
 
 		#endregion
@@ -976,12 +981,14 @@ namespace pospi.CP1252
             this.cmnuTray.MenuItems.Add(itmSep2);
             this.cmnuTray.MenuItems.Add(itmExit);
 
+            loadPrefs();
 			RegisterClipboardViewer();
 		}
 
 		private void frmMain_Closing(object sender, System.ComponentModel.CancelEventArgs e)
 		{
 			UnregisterClipboardViewer();
+            savePrefs();
 		}
 
         private void notifyIcon1_BalloonTipClicked(object sender, EventArgs e)
@@ -1007,10 +1014,35 @@ namespace pospi.CP1252
 
 		#endregion
 
+#region save and load state
 
-		#region IDisposable Implementation
+        private void loadPrefs()
+        {
+            IniParser parser = new IniParser(@"CP1252Fixer.ini");
 
-		/// <summary>
+            for (int i = 0; i < CMOptions.Length; ++i)
+            {
+                String on = parser.GetSetting("options", CMOptions[i].text.ToUpper());
+                setOption(ref CMOptions[i], on == "TRUE");
+            }
+        }
+
+        private void savePrefs()
+        {
+            IniParser parser = new IniParser(@"CP1252Fixer.ini");
+
+            for (int i = 0; i < CMOptions.Length; ++i)
+            {
+                parser.AddSetting("options", CMOptions[i].text, (CMOptions[i].active ? "true" : "false"));
+            }
+            parser.SaveSettings();
+        }
+
+#endregion
+
+        #region IDisposable Implementation
+
+        /// <summary>
 		/// Clean up any resources being used.
 		/// </summary>
 		protected override void Dispose( bool disposing )
