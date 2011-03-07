@@ -39,6 +39,25 @@ namespace pospi.CP1252
 	{
         #region Character Mappings
 
+        // not used like the others, this overrides character matches in RTF text
+        Dictionary<int, String> rtfSpecials = new Dictionary<int, String>()
+        {
+            {0x2013, "\\endash "},
+            {0x2014, "\\emdash "},
+            {8194, "\\enspace "},
+            {8195, "\\emspace "},
+            {0x2022, "\\bullet "},
+            {0x2018, "\\lquote "},
+            {0x2019, "\\rquote "},
+            {0x201C, "\\ldblquote "},
+            {0x201D, "\\rdblquote "},
+            {160, "\\~ "},       // &nbsp;
+            {173, "\\- "},       // &shy; 
+                    // no non-breaking hyphen equivalent in HTML
+            {8204, "\\zwnj "},   // &zwnj;
+            {8205, "\\zwj "}     // &zwj;
+        };
+
         Dictionary<int, String> smartQuotesTranslate = new Dictionary<int, String>()
         {
             { 0x201A, ","},
@@ -371,7 +390,7 @@ namespace pospi.CP1252
         private bool enabled = true;        // turns everything on/off
 
 		private bool _copiedRTF = false;	// true if RTF was copied rather than text
-        private String _rawClip;        // raw clipboard data
+        private String _rawClip = "";      // raw clipboard data
         private String _modifiedClip;   // clipboard text with replacements made
 
         private bool clipInserting = false; // true when pasting BACK into clipboard
@@ -492,17 +511,32 @@ namespace pospi.CP1252
                     found = true;
                 }
             }
-
+            //Console.WriteLine(_rawClip + "\n\n" + _modifiedClip);
             return found;
         }
 
         private bool runReplacements(Dictionary<int, String> repls)
         {
             bool found = false;
+			
             foreach (KeyValuePair<int, String> replacement in repls)
             {
+				String changed;
                 String search = Char.ConvertFromUtf32(replacement.Key);
-                String changed = _modifiedClip.Replace(search, replacement.Value);
+                if (_copiedRTF && !CMOptions[4].active)
+                {
+                    if (rtfSpecials.ContainsKey(replacement.Key))   // rtf special-escaped characters
+                    {
+                        search = rtfSpecials[replacement.Key];
+                    }
+                    else if (replacement.Key > 0x80)                // rtf high-ascii
+                    {
+                        search = "\\\'" + replacement.Key.ToString("x");    // rtf escape sequences are in lowercase
+                    }
+                    changed = _modifiedClip.Replace(search, replacement.Value);
+				} else {
+                    changed = _modifiedClip.Replace(search, replacement.Value);
+                }
                 if (!found && changed != _modifiedClip)
                 {
                     found = true;
@@ -530,42 +564,58 @@ namespace pospi.CP1252
             return found;
         }
 
-        private String getClipAsString(IDataObject iData)
+        private bool importClipData(IDataObject iData)
 		{
-            String contents = "";
 			//
 			// If it is not text then quit
 			// cannot search bitmap etc
 			//
             try 
 			{
+                String oldClip = _rawClip;
 			    if (iData.GetDataPresent(DataFormats.Rtf))
 			    {
-                    _rawClip = (string)iData.GetData(DataFormats.Rtf);
+                    _rawClip = normaliseRtf((string)iData.GetData(DataFormats.Rtf));
 					_copiedRTF = true;
 
-                    contents = convertRTFToString(_rawClip);
 				    setNotificationTooltip("RTF copied");
 			    }
                 else if (iData.GetDataPresent(DataFormats.UnicodeText))
                 {
                     _rawClip = (string)iData.GetData(DataFormats.UnicodeText);
 					_copiedRTF = false;
-					
-                    contents = _rawClip;
+
                     setNotificationTooltip("Text copied");
                 }
-                if (_rawClip == null)   // nothing was on the clipboard
+                if (_rawClip == null || _rawClip == "")   // nothing was on the clipboard
                 {
-                    _rawClip = "";
+                    _rawClip = oldClip;
+                    return false;
                 }
+                return true;
             }
 			catch (Exception ex)
 			{
 				MessageBox.Show(ex.ToString());
 			}
-            return contents;
+            return false;
 		}
+
+        // some applications have VERY SILLY rtf encoding (looking at you, Word)
+        // Parsing it via a RichTextBox first cleans these ones up a great deal.
+        private String normaliseRtf(String str)
+        {
+            System.Windows.Forms.RichTextBox rtBox = new System.Windows.Forms.RichTextBox();
+            try
+            {
+                rtBox.Rtf = (string)str;
+                return (string)rtBox.Rtf;
+            }
+            catch (Exception e)
+            {
+                return str;
+            }
+        }
 
         // convert RTF data to plainText using a RichTextBox
         private String convertRTFToString(String str)
@@ -620,10 +670,10 @@ namespace pospi.CP1252
 				return;
 			}
 
-            String strClip = getClipAsString(iData);  // this also assigns _rawClip and _copiedRTF
+            bool textDataPresent = importClipData(iData);  // this also assigns _rawClip and _copiedRTF
             
             // show current clipboard text even if there was no match
-            if (strClip != "")
+            if (textDataPresent)
             {
                 if (_copiedRTF)
                 {
@@ -643,7 +693,7 @@ namespace pospi.CP1252
                 }
             }
 
-            if (replaceQuotes())
+            if (textDataPresent && replaceQuotes())
 			{
                 bool rtfOutput = _copiedRTF && !CMOptions[4].active;
 
@@ -663,30 +713,31 @@ namespace pospi.CP1252
                 );
 
                 clipInserting = true;
-                storeToClipboard(_modifiedClip, rtfOutput);
+                storeToClipboard(iData, _modifiedClip, rtfOutput);
                 clipInserting = false;
 			}
 		}
 
-        private void storeToClipboard(String value, bool asRTF)
+        private void storeToClipboard(IDataObject ido, String value, bool asRTF)
         {
             String err = null;
-            IDataObject ido = new DataObject();
+            IDataObject newdo = new DataObject();
 
             if (asRTF)
             {
                 // also set clipboard text property
                 String temp = convertRTFToString(_modifiedClip);
-                ido.SetData(DataFormats.UnicodeText, true, temp);
-                ido.SetData(DataFormats.Rtf, true, _modifiedClip);
+                newdo.SetData(DataFormats.UnicodeText, false, temp);
+                newdo.SetData(DataFormats.Rtf, true, _modifiedClip);
             }
             else
             {
-                ido.SetData(DataFormats.UnicodeText, true, _modifiedClip);
+                newdo.SetData(DataFormats.Rtf, false, null);
+                newdo.SetData(DataFormats.UnicodeText, true, _modifiedClip);
             }
             try
             {
-                Clipboard.SetDataObject(ido, true);
+                Clipboard.SetDataObject(newdo, true, 5, 250);
             }
             catch (ExternalException e)
             {
