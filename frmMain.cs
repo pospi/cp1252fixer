@@ -477,7 +477,6 @@ namespace pospi.CP1252
             if (CMOptions[4].active)        // convert to plaintext
             {
                 _modifiedClip = convertRTFToString(_rawClip);
-                found = true;
             }
 
             if (CMOptions[0].active)        // replace smart quotes
@@ -705,12 +704,7 @@ namespace pospi.CP1252
 					ctlClipboardText.Text = _modifiedClip;
 				}
 
-				notifyIcon1.ShowBalloonTip(
-                    1000, 
-                    "Characters fixed", 
-                    "Click to view the clipboard contents",
-                    ToolTipIcon.Info
-                );
+                trayMessage("Characters fixed", "Click to view the clipboard contents", ToolTipIcon.Info);
 
                 clipInserting = true;
                 storeToClipboard(iData, _modifiedClip, rtfOutput);
@@ -749,13 +743,18 @@ namespace pospi.CP1252
             }
             if (err != null)
             {
-                notifyIcon1.ShowBalloonTip(
-                    1000,
-                    "Character fix failed",
-                    err,
-                    ToolTipIcon.Error
-                );
+                trayMessage("Character fix failed", err, ToolTipIcon.Error);
             }
+        }
+
+        private void trayMessage(String title, String message, ToolTipIcon icon)
+        {
+            notifyIcon1.ShowBalloonTip(
+                1000,
+                title,
+                message,
+                icon
+            );
         }
 
 		#endregion
