@@ -1018,6 +1018,12 @@ namespace pospi.CP1252
 
         private void loadPrefs()
         {
+            if (!File.Exists("CP1252Fixer.ini"))
+            {
+                System.IO.FileStream fs = System.IO.File.Create("CP1252Fixer.ini");
+                fs.Close();
+            }
+
             IniParser parser = new IniParser(@"CP1252Fixer.ini");
 
             for (int i = 0; i < CMOptions.Length; ++i)
@@ -1073,11 +1079,11 @@ namespace pospi.CP1252
             this.cmnuTray = new System.Windows.Forms.ContextMenu();
             this.itmSep1 = new System.Windows.Forms.MenuItem();
             this.itmHide = new System.Windows.Forms.MenuItem();
+            this.toggleEnabled = new System.Windows.Forms.MenuItem();
             this.itmSep2 = new System.Windows.Forms.MenuItem();
             this.itmExit = new System.Windows.Forms.MenuItem();
             this.ctlClipboardText = new System.Windows.Forms.RichTextBox();
             this.notifyIcon1 = new System.Windows.Forms.NotifyIcon(this.components);
-            this.toggleEnabled = new System.Windows.Forms.MenuItem();
             this.SuspendLayout();
             // 
             // cmnuTray
@@ -1099,6 +1105,13 @@ namespace pospi.CP1252
             this.itmHide.Index = 1;
             this.itmHide.Text = "Hide";
             this.itmHide.Click += new System.EventHandler(this.itmHide_Click);
+            // 
+            // toggleEnabled
+            // 
+            this.toggleEnabled.Checked = true;
+            this.toggleEnabled.Index = 2;
+            this.toggleEnabled.Text = "Enabled";
+            this.toggleEnabled.Click += new System.EventHandler(this.menuItem1_Click);
             // 
             // itmSep2
             // 
@@ -1132,13 +1145,6 @@ namespace pospi.CP1252
             this.notifyIcon1.Visible = true;
             this.notifyIcon1.BalloonTipClicked += new System.EventHandler(this.notifyIcon1_BalloonTipClicked);
             this.notifyIcon1.MouseClick += new System.Windows.Forms.MouseEventHandler(this.notifyIcon1_MouseClick);
-            // 
-            // toggleEnabled
-            // 
-            this.toggleEnabled.Checked = true;
-            this.toggleEnabled.Index = 2;
-            this.toggleEnabled.Text = "Enabled";
-            this.toggleEnabled.Click += new System.EventHandler(this.menuItem1_Click);
             // 
             // frmMain
             // 
