@@ -343,6 +343,7 @@ namespace pospi.CP1252
 		private System.Windows.Forms.MenuItem itmSep2;
         private NotifyIcon notifyIcon1;
         private System.Windows.Forms.MenuItem itmSep1;
+        private MenuItem toggleEnabled;
         private ToolTip toolTip1;
 
 		#endregion
@@ -366,6 +367,8 @@ namespace pospi.CP1252
 		#endregion
 
         #region Properties - Private
+
+        private bool enabled = true;        // turns everything on/off
 
 		private bool _copiedRTF = false;	// true if RTF was copied rather than text
         private String _rawClip;        // raw clipboard data
@@ -590,6 +593,11 @@ namespace pospi.CP1252
 		/// </summary>
 		private void ProcessClipboard()
 		{
+            if (!enabled)
+            {
+                return;
+            }
+
 			//
 			// Data on the clipboard uses the 
 			// IDataObject interface
@@ -803,6 +811,20 @@ namespace pospi.CP1252
             toggleWindow();
         }
 
+        // toggle replacements on/off
+        private void menuItem1_Click(object sender, EventArgs e)
+        {
+            MenuItem clicked = (System.Windows.Forms.MenuItem)sender;
+
+            enabled = !enabled;
+            clicked.Checked = enabled;
+
+            for (int i = 0; i < CMOptions.Length; ++i)
+            {
+                CMOptions[i].menuItem.Enabled = enabled;
+            }
+        }
+
         private void notifyIcon1_MouseClick(object sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Left)
@@ -900,6 +922,7 @@ namespace pospi.CP1252
             }
             this.cmnuTray.MenuItems.Add(itmSep1);
             this.cmnuTray.MenuItems.Add(itmHide);
+            this.cmnuTray.MenuItems.Add(toggleEnabled);
             this.cmnuTray.MenuItems.Add(itmSep2);
             this.cmnuTray.MenuItems.Add(itmExit);
 
@@ -972,6 +995,7 @@ namespace pospi.CP1252
             this.itmExit = new System.Windows.Forms.MenuItem();
             this.ctlClipboardText = new System.Windows.Forms.RichTextBox();
             this.notifyIcon1 = new System.Windows.Forms.NotifyIcon(this.components);
+            this.toggleEnabled = new System.Windows.Forms.MenuItem();
             this.SuspendLayout();
             // 
             // cmnuTray
@@ -979,6 +1003,7 @@ namespace pospi.CP1252
             this.cmnuTray.MenuItems.AddRange(new System.Windows.Forms.MenuItem[] {
             this.itmSep1,
             this.itmHide,
+            this.toggleEnabled,
             this.itmSep2,
             this.itmExit});
             // 
@@ -995,12 +1020,12 @@ namespace pospi.CP1252
             // 
             // itmSep2
             // 
-            this.itmSep2.Index = 2;
+            this.itmSep2.Index = 3;
             this.itmSep2.Text = "-";
             // 
             // itmExit
             // 
-            this.itmExit.Index = 3;
+            this.itmExit.Index = 4;
             this.itmExit.MergeOrder = 1000;
             this.itmExit.Text = "E&xit";
             this.itmExit.Click += new System.EventHandler(this.itmExit_Click_1);
@@ -1025,6 +1050,13 @@ namespace pospi.CP1252
             this.notifyIcon1.Visible = true;
             this.notifyIcon1.BalloonTipClicked += new System.EventHandler(this.notifyIcon1_BalloonTipClicked);
             this.notifyIcon1.MouseClick += new System.Windows.Forms.MouseEventHandler(this.notifyIcon1_MouseClick);
+            // 
+            // toggleEnabled
+            // 
+            this.toggleEnabled.Checked = true;
+            this.toggleEnabled.Index = 2;
+            this.toggleEnabled.Text = "Enabled";
+            this.toggleEnabled.Click += new System.EventHandler(this.menuItem1_Click);
             // 
             // frmMain
             // 
