@@ -983,6 +983,9 @@ namespace pospi.CP1252
 
             loadPrefs();
 			RegisterClipboardViewer();
+
+            // hide window when loading up
+            this.Visible = false;
 		}
 
 		private void frmMain_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -1022,6 +1025,7 @@ namespace pospi.CP1252
             {
                 System.IO.FileStream fs = System.IO.File.Create("CP1252Fixer.ini");
                 fs.Close();
+                return;     // just make the file for saving to later, and keep defaults
             }
 
             IniParser parser = new IniParser(@"CP1252Fixer.ini");
@@ -1103,7 +1107,7 @@ namespace pospi.CP1252
             // itmHide
             // 
             this.itmHide.Index = 1;
-            this.itmHide.Text = "Hide";
+            this.itmHide.Text = "Show";
             this.itmHide.Click += new System.EventHandler(this.itmHide_Click);
             // 
             // toggleEnabled
@@ -1149,15 +1153,17 @@ namespace pospi.CP1252
             // frmMain
             // 
             this.AutoScaleBaseSize = new System.Drawing.Size(6, 15);
-            this.ClientSize = new System.Drawing.Size(484, 273);
+            this.ClientSize = new System.Drawing.Size(484, 294);
             this.Controls.Add(this.ctlClipboardText);
             this.Font = new System.Drawing.Font("Tahoma", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Location = new System.Drawing.Point(100, 100);
             this.Menu = this.menuMain;
             this.Name = "frmMain";
-            this.StartPosition = System.Windows.Forms.FormStartPosition.Manual;
+            this.ShowInTaskbar = false;
+            this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "CP-1252 Fixer";
+            this.WindowState = System.Windows.Forms.FormWindowState.Minimized;
             this.Load += new System.EventHandler(this.frmMain_Load);
             this.Closing += new System.ComponentModel.CancelEventHandler(this.frmMain_Closing);
             this.Resize += new System.EventHandler(this.frmMain_Resize);
