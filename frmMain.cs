@@ -1153,7 +1153,7 @@ namespace pospi.CP1252
             // frmMain
             // 
             this.AutoScaleBaseSize = new System.Drawing.Size(6, 15);
-            this.ClientSize = new System.Drawing.Size(484, 294);
+            this.ClientSize = new System.Drawing.Size(484, 315);
             this.Controls.Add(this.ctlClipboardText);
             this.Font = new System.Drawing.Font("Tahoma", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
