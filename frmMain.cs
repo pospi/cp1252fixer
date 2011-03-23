@@ -51,6 +51,9 @@ namespace pospi.CP1252
             {0x2019, "\\rquote "},
             {0x201C, "\\ldblquote "},
             {0x201D, "\\rdblquote "},
+            {0x2026, "\\'85"},      // ellipsis
+            {0x201A, "\\'82"},      // second
+            {0x201E, "\\'84"},      // minute
             {160, "\\~ "},       // &nbsp;
             {173, "\\- "},       // &shy; 
                     // no non-breaking hyphen equivalent in HTML
