@@ -3,8 +3,8 @@ CP-1252 Fixer
 
 About
 -----
-You work with the internet.
-Your job involves copying and pasting content from Microsoft Word.
+You work with the internet.  
+Your job involves copying and pasting content from Microsoft Word.  
 Funny characters like **&acirc;&euro;&trade;**, **&acirc;&euro;&tilde;** and **&acirc;^&Agrave;^&Ugrave;** show up on your webpages.
 
 This is a small program which runs in your system tray and monitors your clipboard for the presence of "smart quotes" and other characters normal HTML documents may have problems with. These are automatically fixed without any action on the user's part, leaving you able to go about your work error-free.
@@ -24,14 +24,12 @@ Explanation
 -----------
 Microsoft Word, Outlook, Powerpoint and some other Windows programs use a feature called "smart quotes", which is designed to automatically substitute different characters for keys on your keyboard as you type. This is in an attempt to promote readability via the use of typographer's quotes and punctuation marks. As a result:
 
+<pre>
 <table>
-	<thead>
     <tr>
-        <td>When you type...</td>
-        <td>this appears:</td>
+        <th>When you type...</th>
+        <th>this appears:</th>
     </tr>
-    </thead>
-    <tbody style="font-family: monospace;">
     <tr><td> 'text </td><td> &lsquo;text </td></tr>
     <tr><td> text' </td><td> text&rsquo; </td></tr>
     <tr><td> "text </td><td> &ldquo;text </td></tr>
@@ -40,8 +38,8 @@ Microsoft Word, Outlook, Powerpoint and some other Windows programs use a featur
     <tr><td> -- </td><td> &mdash; </td></tr>
     <tr><td> - </td><td> &ndash; </td></tr>
     <tr><td> ... </td><td> &hellip; </td></tr>
-    </tbody>
 </table>
+</pre>
 
 When pasted into a *normal* HTML document [encoded as ASCII text](http://en.wikipedia.org/wiki/ISO-8859-1#ISO-8859-1), the character set of the document doesn't know how to display these characters. Instead, they are spit out as the combination of ASCII letters which make up the longer number of the extended character, resulting in broken text. For example, &lsquo; is `0xE28098`:
 
