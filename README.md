@@ -24,19 +24,19 @@ Explanation
 -----------
 Microsoft Word, Outlook, Powerpoint and some other Windows programs use a feature called "smart quotes", which is designed to automatically substitute different characters for keys on your keyboard as you type. This is in an attempt to promote readability via the use of typographer's quotes and punctuation marks. As a result:
 
-<table>
+<table style="font-family: monospace">
     <tr>
         <th>When you type...</th>
         <th>this appears:</th>
     </tr>
-    <tr><td>` 'text `</td><td>` &lsquo;text `</td></tr>
-    <tr><td>` text' `</td><td>` text&rsquo; `</td></tr>
-    <tr><td>` "text `</td><td>` &ldquo;text `</td></tr>
-    <tr><td>` text" `</td><td>` text&rdquo; `</td></tr>
-    <tr><td>` - text `</td><td>` &bull; text `</td></tr>
-    <tr><td>` -- `</td><td>` &mdash; `</td></tr>
-    <tr><td>` - `</td><td>` &ndash; `</td></tr>
-    <tr><td>` ... `</td><td>` &hellip; `</td></tr>
+    <tr><td> 'text </td><td> &lsquo;text </td></tr>
+    <tr><td> text' </td><td> text&rsquo; </td></tr>
+    <tr><td> "text </td><td> &ldquo;text </td></tr>
+    <tr><td> text" </td><td> text&rdquo; </td></tr>
+    <tr><td> - text </td><td> &bull; text </td></tr>
+    <tr><td> -- </td><td> &mdash; </td></tr>
+    <tr><td> - </td><td> &ndash; </td></tr>
+    <tr><td> ... </td><td> &hellip; </td></tr>
 </table>
 
 When pasted into a *normal* HTML document [encoded as ASCII text](http://en.wikipedia.org/wiki/ISO-8859-1#ISO-8859-1), the character set of the document doesn't know how to display these characters. Instead, they are spit out as the combination of ASCII letters which make up the longer number of the extended character, resulting in broken text. For example, &lsquo; is `0xE28098`:
