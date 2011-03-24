@@ -5,7 +5,7 @@ About
 -----
 You work with the internet.  
 Your job involves copying and pasting content from Microsoft Word.  
-Funny characters like **&acirc;&euro;&trade;**, **&acirc;&euro;&tilde;** and **&acirc;\^&Agrave;\^&Ugrave;** show up on your webpages.
+Funny characters like **&acirc;&euro;&trade;**, **&acirc;&euro;&tilde;** and **&acirc;&circ;&Agrave;&circ;&Ugrave;** show up on your webpages.
 
 This is a small program which runs in your system tray and monitors your clipboard for the presence of "smart quotes" and other characters normal HTML documents may have problems with. These are automatically fixed without any action on the user's part, leaving you able to go about your work error-free.
 
@@ -29,14 +29,14 @@ Microsoft Word, Outlook, Powerpoint and some other Windows programs use a featur
         <th>When you type...</th>
         <th>this appears:</th>
     </tr>
-    <tr><td><span style="font-family: monospace;"> 'text </span></td><td><span style="font-family: monospace;"> &lsquo;text </span></td></tr>
-    <tr><td><span style="font-family: monospace;"> text' </span></td><td><span style="font-family: monospace;"> text&rsquo; </span></td></tr>
-    <tr><td><span style="font-family: monospace;"> "text </span></td><td><span style="font-family: monospace;"> &ldquo;text </span></td></tr>
-    <tr><td><span style="font-family: monospace;"> text" </span></td><td><span style="font-family: monospace;"> text&rdquo; </span></td></tr>
-    <tr><td><span style="font-family: monospace;"> - text </span></td><td><span style="font-family: monospace;"> &bull; text </span></td></tr>
-    <tr><td><span style="font-family: monospace;"> -- </span></td><td><span style="font-family: monospace;"> &mdash; </span></td></tr>
-    <tr><td><span style="font-family: monospace;"> - </span></td><td><span style="font-family: monospace;"> &ndash; </span></td></tr>
-    <tr><td><span style="font-family: monospace;"> ... </span></td><td><span style="font-family: monospace;"> &hellip; </span></td></tr>
+    <tr><td>` 'text `</td><td>` &lsquo;text `</td></tr>
+    <tr><td>` text' `</td><td>` text&rsquo; `</td></tr>
+    <tr><td>` "text `</td><td>` &ldquo;text `</td></tr>
+    <tr><td>` text" `</td><td>` text&rdquo; `</td></tr>
+    <tr><td>` - text `</td><td>` &bull; text `</td></tr>
+    <tr><td>` -- `</td><td>` &mdash; `</td></tr>
+    <tr><td>` - `</td><td>` &ndash; `</td></tr>
+    <tr><td>` ... `</td><td>` &hellip; `</td></tr>
 </table>
 
 When pasted into a *normal* HTML document [encoded as ASCII text](http://en.wikipedia.org/wiki/ISO-8859-1#ISO-8859-1), the character set of the document doesn't know how to display these characters. Instead, they are spit out as the combination of ASCII letters which make up the longer number of the extended character, resulting in broken text. For example, &lsquo; is `0xE28098`:
