@@ -9,6 +9,12 @@ Funny characters like **&acirc;&euro;&trade;**, **&acirc;&euro;&tilde;** and **&
 
 This is a small program which runs in your system tray and monitors your clipboard for the presence of "smart quotes" and other characters normal HTML documents may have problems with. These are automatically fixed without any action on the user's part, leaving you able to go about your work error-free.
 
+Usage
+-----
+Simply copy CP1252Fixer.exe somewhere appropriate and run it - its icon should now be visible in your system tray.
+
+Right-click the system tray icon to set the various replacement options or toggle replacements entirely. Left clicking the icon shows the main window, with help tooltips for each option and a display of the current clipboard text.
+
 Features
 --------
 * Keep your webpages safe from potentially damaging markup
@@ -62,3 +68,4 @@ This software is provided under an MIT open source license, read the 'LICENSE.tx
 Known Issues
 ------------
 * Seems to lose its handle on the clipboard after a computer hibernation, probably needs to intercept an ACPI event and re-register?
+* Copying & pasting lists within Word will lose the bullet formatting when those replacements are active. I consider this a non-error, as quotes and such only work seamlessly because they are converted back to Word-style quotes on paste. In any case, just disable the feature when working like this.
