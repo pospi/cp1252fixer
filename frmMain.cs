@@ -366,6 +366,7 @@ namespace pospi.CP1252
         private NotifyIcon notifyIcon1;
         private System.Windows.Forms.MenuItem itmSep1;
         private MenuItem toggleEnabled;
+        private LinkLabel linkLabel1;
         private ToolTip toolTip1;
 
 		#endregion
@@ -984,6 +985,9 @@ namespace pospi.CP1252
             this.cmnuTray.MenuItems.Add(itmSep2);
             this.cmnuTray.MenuItems.Add(itmExit);
 
+            // add link URLs
+            this.linkLabel1.Links.Add(0, 38, "pospi.spadgos.com/projects/cp1252fixer");
+
             loadPrefs();
 			RegisterClipboardViewer();
 
@@ -1091,6 +1095,7 @@ namespace pospi.CP1252
             this.itmExit = new System.Windows.Forms.MenuItem();
             this.ctlClipboardText = new System.Windows.Forms.RichTextBox();
             this.notifyIcon1 = new System.Windows.Forms.NotifyIcon(this.components);
+            this.linkLabel1 = new System.Windows.Forms.LinkLabel();
             this.SuspendLayout();
             // 
             // cmnuTray
@@ -1134,12 +1139,14 @@ namespace pospi.CP1252
             // 
             // ctlClipboardText
             // 
-            this.ctlClipboardText.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
+            this.ctlClipboardText.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom)
+                        | System.Windows.Forms.AnchorStyles.Left)
+                        | System.Windows.Forms.AnchorStyles.Right)));
             this.ctlClipboardText.DetectUrls = false;
             this.ctlClipboardText.Location = new System.Drawing.Point(109, 0);
             this.ctlClipboardText.Name = "ctlClipboardText";
             this.ctlClipboardText.ReadOnly = true;
-            this.ctlClipboardText.Size = new System.Drawing.Size(375, 273);
+            this.ctlClipboardText.Size = new System.Drawing.Size(375, 312);
             this.ctlClipboardText.TabIndex = 0;
             this.ctlClipboardText.Text = "";
             this.ctlClipboardText.WordWrap = false;
@@ -1153,10 +1160,23 @@ namespace pospi.CP1252
             this.notifyIcon1.BalloonTipClicked += new System.EventHandler(this.notifyIcon1_BalloonTipClicked);
             this.notifyIcon1.MouseClick += new System.Windows.Forms.MouseEventHandler(this.notifyIcon1_MouseClick);
             // 
+            // linkLabel1
+            // 
+            this.linkLabel1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
+            this.linkLabel1.AutoSize = true;
+            this.linkLabel1.Location = new System.Drawing.Point(12, 334);
+            this.linkLabel1.Name = "linkLabel1";
+            this.linkLabel1.Size = new System.Drawing.Size(228, 14);
+            this.linkLabel1.TabIndex = 1;
+            this.linkLabel1.TabStop = true;
+            this.linkLabel1.Text = "pospi.spadgos.com/projects/cp1252fixer";
+            this.linkLabel1.LinkClicked += new System.Windows.Forms.LinkLabelLinkClickedEventHandler(this.linkLabel1_LinkClicked);
+            // 
             // frmMain
             // 
             this.AutoScaleBaseSize = new System.Drawing.Size(6, 15);
-            this.ClientSize = new System.Drawing.Size(484, 315);
+            this.ClientSize = new System.Drawing.Size(484, 357);
+            this.Controls.Add(this.linkLabel1);
             this.Controls.Add(this.ctlClipboardText);
             this.Font = new System.Drawing.Font("Tahoma", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
@@ -1171,9 +1191,27 @@ namespace pospi.CP1252
             this.Closing += new System.ComponentModel.CancelEventHandler(this.frmMain_Closing);
             this.Resize += new System.EventHandler(this.frmMain_Resize);
             this.ResumeLayout(false);
+            this.PerformLayout();
 
 		}
 		#endregion
+
+        private void linkLabel1_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            // Determine which link was clicked within the LinkLabel.
+            linkLabel1.Links[linkLabel1.Links.IndexOf(e.Link)].Visited = true;
+
+            // Display the appropriate link based on the value of the 
+            // LinkData property of the Link object.
+            string target = e.Link.LinkData as string;
+
+            // If the value looks like a URL, navigate to it.
+            // Otherwise, display it in a message box.
+            if (null != target)
+            {
+                System.Diagnostics.Process.Start("http://" + target);
+            }
+        }
 
 		
 
