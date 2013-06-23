@@ -15,6 +15,10 @@ Simply copy CP1252Fixer.exe somewhere appropriate and run it - its icon should n
 
 Right-click the system tray icon to set the various replacement options or toggle replacements entirely. Left clicking the icon shows the main window, with help tooltips for each option and a display of the current clipboard text.
 
+Download
+--------
+You can download a [compiled Windows executable here](http://pospi.spadgos.com/projects/cp1252fixer/CP1252Fixer.exe) (sorry, github's removal of the 'files' section made that disappear...)
+
 Features
 --------
 * Keep your webpages safe from potentially damaging markup
