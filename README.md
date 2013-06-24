@@ -17,7 +17,7 @@ Right-click the system tray icon to set the various replacement options or toggl
 
 Download
 --------
-You can download a [compiled Windows executable here](http://pospi.spadgos.com/projects/cp1252fixer/CP1252Fixer.exe) (sorry, github's removal of the 'files' section made that disappear...)
+You can download a [compiled Windows executable here](https://github.com/pospi/cp1252fixer/downloads) (sorry, github's removal of the 'files' section made that disappear...)
 
 Features
 --------
